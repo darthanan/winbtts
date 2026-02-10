@@ -1,92 +1,68 @@
 import os
+import json
 import datetime
 import google.generativeai as genai
 
-# 1. Configuração da IA (A chave deve estar nos Secrets do GitHub como GEMINI_API_KEY)
+# Configuração da IA
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2. O comando que define a inteligência da busca
-prompt = """
-Aja como um analista de apostas profissional. 
-1. Escolha 2 jogos de futebol importantes que acontecem hoje ou amanhã.
-2. O foco é o mercado 'Vitória do Favorito + Ambos Marcam'.
-3. Para cada jogo, gere EXATAMENTE o seguinte bloco de código HTML usando classes do Tailwind CSS:
+def atualizar_dados_historicos(novo_resultado_unidades):
+    # 1. Lê o arquivo JSON
+    with open("historico.json", "r") as f:
+        historico = json.load(f)
+    
+    # 2. Calcula novos valores
+    ultima_entrada = historico[-1]
+    novo_lucro = ultima_entrada["lucro_acumulado"] + novo_resultado_unidades
+    nova_data = datetime.datetime.now().strftime("%d/%m")
+    
+    # Simulação simples de contagem de greens/reds para o exemplo
+    g = ultima_entrada["greens"] + (1 if novo_resultado_unidades > 0 else 0)
+    r = ultima_entrada["reds"] + (1 if novo_resultado_unidades <= 0 else 0)
 
-<div class="card glass rounded-2xl mb-6 cursor-pointer group hover:border-emerald-500/50 transition-colors" onclick="toggleCard(this)">
-    <div class="p-6">
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center space-x-2">
-                <span class="text-xs font-bold text-emerald-400 tracking-wider uppercase">[NOME DA LIGA]</span>
-            </div>
-            <div class="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-1 rounded">
-                <i class="far fa-clock mr-1"></i>[HORARIO DE BRASILIA]
-            </div>
-        </div>
-        <div class="flex justify-between items-center px-2 md:px-8">
-            <div class="flex flex-col items-center w-1/3">
-                <img src="[URL_LOGO_TIME_A]" class="team-logo mb-2">
-                <span class="font-bold text-lg text-center leading-tight">[TIME_A]</span>
-            </div>
-            <div class="flex flex-col items-center justify-center w-1/3">
-                <span class="text-2xl font-black text-slate-600">X</span>
-                <div class="mt-2 text-center">
-                    <span class="block text-xs text-slate-400">ODD ALVO</span>
-                    <span class="text-2xl font-bold text-emerald-400">@[ODD]</span>
-                </div>
-            </div>
-            <div class="flex flex-col items-center w-1/3">
-                <img src="[URL_LOGO_TIME_B]" class="team-logo mb-2">
-                <span class="font-bold text-lg text-center leading-tight">[TIME_B]</span>
-            </div>
-        </div>
-        <div class="mt-6 flex justify-center">
-            <i class="fas fa-chevron-down text-slate-500 chevron transition-transform duration-300"></i>
-        </div>
-    </div>
-    <div class="details-panel bg-slate-900/50 border-t border-slate-700/50">
-        <div class="p-6">
-            <div class="grid md:grid-cols-2 gap-4 mb-6">
-                <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                    <h3 class="text-xs font-bold text-blue-400 uppercase mb-2">Análise Estatística</h3>
-                    <p class="text-sm text-slate-300 italic">[DESCRICAO_ESTATISTICA]</p>
-                </div>
-                <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                    <h3 class="text-xs font-bold text-purple-400 uppercase mb-2">Análise Tática</h3>
-                    <p class="text-sm text-slate-300 italic">[DESCRICAO_TACTICA]</p>
-                </div>
-            </div>
-            <div class="bg-slate-950 rounded-lg p-4">
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-slate-800 p-2 rounded"><span class="block text-xs text-green-500">Bet365</span><span class="font-bold">@[ODD1]</span></div>
-                    <div class="bg-slate-800 p-2 rounded"><span class="block text-xs text-yellow-500">BetMGM</span><span class="font-bold">@[ODD2]</span></div>
-                    <div class="bg-slate-800 p-2 rounded"><span class="block text-xs text-orange-500">Betano</span><span class="font-bold">@[ODD3]</span></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    # 3. Adiciona ao histórico
+    historico.append({
+        "data": nova_data,
+        "lucro_acumulado": round(novo_lucro, 2),
+        "greens": g,
+        "reds": r
+    })
+    
+    # 4. Salva de volta no JSON
+    with open("historico.json", "w") as f:
+        json.dump(historico, f, indent=2)
+    
+    return historico
 
-Importante: Retorne APENAS o código HTML, sem explicações.
-"""
+# --- PROMPT PARA GERAR OS JOGOS ---
+prompt_jogos = "Gere 2 blocos HTML de cards de apostas Win+BTTS para hoje (use o formato anterior)..."
+response = model.generate_content(prompt_jogos)
+html_jogos = response.text.replace("```html", "").replace("```", "").strip()
 
-# 3. Execução da IA
-response = model.generate_content(prompt)
-html_gerado = response.text.replace("```html", "").replace("```", "").strip()
+# --- ATUALIZAÇÃO DO HISTÓRICO ---
+# Aqui simulamos o resultado do dia anterior. 
+# Em um script avançado, a IA checaria o placar real via API.
+resultado_ontem = 1.5 # Exemplo: Ganhou 1.5 unidades ontem
+dados_completos = atualizar_dados_historicos(resultado_ontem)
 
-# 4. Leitura e Atualização do arquivo index.html
+# Preparar listas para o gráfico do Javascript
+labels_grafico = [d["data"] for d in dados_completos]
+valores_grafico = [d["lucro_acumulado"] for d in dados_completos]
+stats_finais = dados_completos[-1]
+
+# --- INJEÇÃO NO INDEX.HTML ---
 with open("index.html", "r", encoding="utf-8") as f:
-    conteudo = f.read()
+    html_site = f.read()
 
-# Atualiza a data de processamento
-data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
-conteudo = conteudo.split('id="update-date">')[0] + f'id="update-date">Atualizado: {data_hoje}</p>' + conteudo.split('id="update-date">')[1].split('</p>', 1)[1]
+# Atualiza os jogos
+html_site = html_site.split("")[0] + "\n" + html_jogos + "\n" + html_site.split("")[1]
 
-# Injeta os novos jogos entre as âncoras
-novo_conteudo = conteudo.split("")[0] + "\n" + html_gerado + "\n" + conteudo.split("")[1]
+# Atualiza o gráfico no Javascript (procura a linha do 'data:' no JS do index.html)
+# Nota: Para isso funcionar 100%, o Python substitui as variáveis do Chart.js
+html_site = html_site.replace("labels: ['Jan 01', 'Jan 10', 'Jan 20', 'Fev 01', 'Fev 10']", f"labels: {labels_grafico}")
+html_site = html_site.replace("data: [0, 4.2, 3.1, 8.5, 12.4]", f"data: {valores_grafico}")
 
-# 5. Salva o arquivo final
+# Salva o index atualizado
 with open("index.html", "w", encoding="utf-8") as f:
-    f.write(novo_conteudo)
-
-print("Site atualizado com sucesso pela IA!")
+    f.write(html_site)
