@@ -85,9 +85,9 @@
                             </div>
                             <div class="bg-slate-950 rounded-lg p-4 text-center">
                                  <div class="grid grid-cols-3 gap-2">
-                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-green-500">Bet365</span><br><b>@3.10</b></div>
-                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-yellow-500">BetMGM</span><br><b>@3.05</b></div>
-                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-orange-500">Betano</span><br><b>@3.08</b></div>
+                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-green-500 font-bold">Bet365</span><br><b>@3.10</b></div>
+                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-yellow-500 font-bold">BetMGM</span><br><b>@3.05</b></div>
+                                    <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-orange-500 font-bold">Betano</span><br><b>@3.08</b></div>
                                  </div>
                             </div>
                         </div>
@@ -129,13 +129,20 @@
                             <div class="grid md:grid-cols-2 gap-4 mb-6">
                                 <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
                                     <h3 class="text-xs font-bold text-blue-400 uppercase mb-2">Análise Estatística</h3>
-                                    <p class="text-sm text-slate-300 italic">Média de 3.5 gols nos últimos 5 confrontos. Leipzig marcou em todos os últimos 8 jogos.</p>
+                                    <p class="text-sm text-slate-300 italic">Média de 3.5 gols nos últimos confrontos. Leipzig marcou em todos os últimos 8 jogos.</p>
                                 </div>
                                 <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
                                     <h3 class="text-xs font-bold text-purple-400 uppercase mb-2">Análise Tática</h3>
-                                    <p class="text-sm text-slate-300 italic">Bayern domina a posse, mas Leipzig é letal no contra-ataque.</p>
+                                    <p class="text-sm text-slate-300 italic">Bayern domina a posse, mas Leipzig é letal no contra-ataque. Cenário ideal para BTTS.</p>
                                 </div>
                             </div>
+                            <div class="bg-slate-950 rounded-lg p-4 text-center">
+                                <div class="grid grid-cols-3 gap-2">
+                                   <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-green-500 font-bold">Bet365</span><br><b>@2.85</b></div>
+                                   <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-yellow-500 font-bold">BetMGM</span><br><b>@2.80</b></div>
+                                   <div class="bg-slate-800 p-2 rounded text-xs"><span class="text-orange-500 font-bold">Betano</span><br><b>@2.82</b></div>
+                                </div>
+                           </div>
                         </div>
                     </div>
                 </div>
@@ -185,7 +192,7 @@
                 document.getElementById('tab-history').classList.remove('hidden');
                 document.getElementById('btn-history').classList.add('active');
                 document.getElementById('btn-tips').classList.add('text-slate-500');
-                initChart();
+                setTimeout(initChart, 100); // Garante que o canvas está visível antes de iniciar
             }
         }
 
@@ -196,8 +203,14 @@
         }
 
         function initChart() {
-            const ctx = document.getElementById('profitChart').getContext('2d');
-            new Chart(ctx, {
+            const canvas = document.getElementById('profitChart');
+            if (!canvas) return;
+            
+            // Destruir gráfico anterior para evitar sobreposição se mudar de aba várias vezes
+            if (window.myChart) window.myChart.destroy();
+
+            const ctx = canvas.getContext('2d');
+            window.myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: ['Jan 01', 'Jan 10', 'Jan 20', 'Fev 01', 'Fev 10'],
