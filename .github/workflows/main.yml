@@ -24,10 +24,10 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python update_tips.py
 
-      - name: Salvar mudanças no site
+      - name: Salvar mudanças no site e historico
         run: |
           git config --global user.name 'Bot de Tips'
           git config --global user.email 'bot@tips.com'
-          git add .
-          git commit -m "Atualização automática de tips" || exit 0
+          git add index.html historico.json
+          git commit -m "Atualização diária: Tips e Histórico" || exit 0
           git push
