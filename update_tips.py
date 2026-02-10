@@ -3,83 +3,113 @@ import json
 import datetime
 import requests
 import google.generativeai as genai
+import re
 
-# Configurações de API
+# 1. Configurações de Conectividade
 GENAI_KEY = os.environ["GEMINI_API_KEY"]
 FOOTBALL_KEY = os.environ["FOOTBALL_API_KEY"]
 
 genai.configure(api_key=GENAI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-def checar_resultado_real(fixture_id, time_favorito_id):
-    """Verifica na API se deu Win + BTTS"""
-    url = f"https://v3.football.api-sports.io/fixtures?id={fixture_id}"
-    headers = {'x-apisports-key': FOOTBALL_KEY}
-    
+def conferir_resultados_ontem():
+    """Lê o HTML atual, busca os IDs ocultos e checa na API o que aconteceu"""
     try:
-        response = requests.get(url, headers=headers).json()
-        match = response['response'][0]
+        with open("index.html", "r", encoding="utf-8") as f:
+            html_antigo = f.read()
         
-        goals_home = match['goals']['home']
-        goals_away = match['goals']['away']
-        vencedor_id = match['teams']['home']['id'] if match['teams']['home']['winner'] else match['teams']['away']['id']
+        # Busca IDs ocultos usando Regex (Ex: )
+        fixtures = re.findall(r"", html_antigo)
+        favoritos = re.findall(r"", html_antigo)
         
-        deu_btts = goals_home > 0 and goals_away > 0
-        venceu_favorito = vencedor_id == time_favorito_id
-        
-        return 1.0 if (deu_btts and venceu_favorito) else -1.0
-    except:
-        return 0.0 # Caso o jogo tenha sido adiado ou erro
+        lucro_total = 0
+        headers = {'x-apisports-key': FOOTBALL_KEY}
 
-def atualizar_sistema():
-    # 1. Carregar Histórico
+        for i in range(len(fixtures)):
+            url = f"https://v3.football.api-sports.io/fixtures?id={fixtures[i]}"
+            res = requests.get(url, headers=headers).json()
+            
+            if res['response']:
+                match = res['response'][0]
+                status = match['fixture']['status']['short']
+                
+                if status == 'FT': # Jogo Finalizado
+                    g_home = match['goals']['home']
+                    g_away = match['goals']['away']
+                    # Verifica quem ganhou (ID do time com winner: True)
+                    vencedor_id = None
+                    if match['teams']['home']['winner']: vencedor_id = match['teams']['home']['id']
+                    elif match['teams']['away']['winner']: vencedor_id = match['teams']['away']['id']
+
+                    deu_btts = (g_home > 0 and g_away > 0)
+                    venceu_favorito = (str(vencedor_id) == favoritos[i])
+
+                    if deu_btts and venceu_favorito:
+                        lucro_total += 1.5 # Green (Odd média estimada)
+                    else:
+                        lucro_total -= 1.0 # Red
+        return lucro_total
+    except Exception as e:
+        print(f"Erro na conferência: {e}")
+        return 0
+
+def rodar_atualizacao():
+    # A. Conferir lucro de ontem
+    lucro_dia = conferir_resultados_ontem()
+
+    # B. Atualizar historico.json
     with open("historico.json", "r") as f:
         historico = json.load(f)
-
-    # 2. Lógica de Conferência (Simulada aqui, pois precisaríamos salvar o ID do jogo anterior)
-    # Para simplificar este início, vamos assumir um lucro médio ou buscar via IA
-    resultado_dia = 1.2 # Este valor seria automatizado com a checagem acima
     
-    novo_lucro = round(historico[-1]["lucro_acumulado"] + resultado_dia, 2)
-    nova_data = datetime.datetime.now().strftime("%d/%m")
-    
-    # Atualizar contadores
-    g = historico[-1]["greens"] + (1 if resultado_dia > 0 else 0)
-    r = historico[-1]["reds"] + (1 if resultado_dia <= 0 else 0)
+    ultimo = historico[-1]
+    novo_acumulado = round(ultimo["lucro_acumulado"] + lucro_dia, 2)
+    g = ultimo["greens"] + (1 if lucro_dia > 0 else 0)
+    r = ultimo["reds"] + (1 if lucro_dia < 0 else 0)
     win_rate = round((g / (g + r)) * 100) if (g+r) > 0 else 0
-
+    
     historico.append({
-        "data": nova_data,
-        "lucro_acumulado": novo_lucro,
+        "data": datetime.datetime.now().strftime("%d/%m"),
+        "lucro_acumulado": novo_acumulado,
         "greens": g,
         "reds": r
     })
 
-    # 3. Pedir novas tips ao Gemini
-    prompt = "Gere 2 jogos para hoje no mercado Win+BTTS em formato HTML de card (conforme padrão anterior)."
+    # C. Pedir novas tips ao Gemini com Passo 3 (IDs Ocultos)
+    prompt = """
+    Aja como um especialista em apostas esportivas e analista de dados.
+    1. Pesquise 2 jogos de futebol de elite que acontecem HOJE.
+    2. O mercado alvo é 'Vitória do Favorito + Ambos Marcam' (Win+BTTS).
+    3. Para cada jogo, você DEVE encontrar o ID da FIXTURE na API-Football (API-Sports).
+    4. Retorne o código HTML dos cards seguindo nosso padrão visual.
+    5. No topo de cada card, é OBRIGATÓRIO incluir:
+    6. Não invente IDs. Se não tiver certeza do ID, use o ID de uma liga principal.
+    """
     response = model.generate_content(prompt)
-    html_jogos = response.text.replace("```html", "").replace("```", "").strip()
+    html_novos_jogos = response.text.replace("```html", "").replace("```", "").strip()
 
-    # 4. Atualizar o index.html
+    # D. Injetar no index.html
     with open("index.html", "r", encoding="utf-8") as f:
-        html_site = f.read()
+        site = f.read()
 
-    # Injeção de Dados Dinâmicos no HTML
-    html_site = html_site.replace("labels: ['Jan 01', 'Jan 10', 'Jan 20', 'Fev 01', 'Fev 10']", f"labels: {[d['data'] for d in historico]}")
-    html_site = html_site.replace("data: [0, 4.2, 3.1, 8.5, 12.4]", f"data: {[d['lucro_acumulado'] for d in historico]}")
+    # Atualiza Gráfico e Stats
+    site = site.replace("labels: ['Jan 01', 'Jan 10', 'Jan 20', 'Fev 01', 'Fev 10']", f"labels: {[d['data'] for d in historico]}")
+    site = site.replace("data: [0, 4.2, 3.1, 8.5, 12.4]", f"data: {[d['lucro_acumulado'] for d in historico]}")
     
-    # Atualiza contadores no topo da aba histórico
-    html_site = html_site.replace(">68%<", f">{win_rate}%<")
-    html_site = html_site.replace(">42<", f">{g}<")
-    html_site = html_site.replace(">19<", f">{r}<")
+    # Regex para atualizar contadores Win Rate, Greens e Reds
+    site = re.sub(r'(\d+)%</span>', f'{win_rate}%</span>', site, 1) # Win Rate
+    site = re.sub(r'Greens</span>\s*<span.*?>(\d+)</span>', f'Greens</span><span class="text-xl font-bold text-emerald-400">{g}</span>', site)
+    site = re.sub(r'Reds</span>\s*<span.*?>(\d+)</span>', f'Reds</span><span class="text-xl font-bold text-red-400">{r}</span>', site)
 
-    # Injeção dos Jogos
-    html_site = html_site.split("")[0] + "\n" + html_jogos + "\n" + html_site.split("")[1]
+    # Injeta Jogos
+    topo = site.split("")[0]
+    base = site.split("")[1]
+    site_final = f"{topo}\n{html_novos_jogos}\n{base}"
 
-    # Salvar arquivos
+    # E. Salvar Tudo
     with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html_site)
+        f.write(site_final)
     with open("historico.json", "w") as f:
-        json.dump(historico[-10:], f) # Mantém apenas os últimos 10 dias para não pesar
+        json.dump(historico[-15:], f, indent=2) # Guarda 15 dias de histórico
 
-atualizar_sistema()
+if __name__ == "__main__":
+    rodar_atualizacao()
