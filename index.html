@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consenso IA: Goal King & Keble</title>
+    <title>Consenso IA: Win + BTTS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -26,7 +26,7 @@
         }
         
         .card.active .details-panel {
-            max-height: 800px; /* Altura suficiente para o conteúdo */
+            max-height: 800px;
             opacity: 1;
         }
 
@@ -50,8 +50,8 @@
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">
                     AI CONSENSUS
                 </h1>
-                <p class="text-sm text-slate-400 mt-1">
-                    <i class="fas fa-robot mr-1"></i> The Goal King + Alex Keble
+                <p class="text-sm text-slate-400 mt-1 font-semibold">
+                    Mercado Vitória + Ambos Marcam (Win+BTTS)
                 </p>
             </div>
             <div class="text-right">
@@ -104,11 +104,11 @@
                 <div class="p-6">
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-xs font-bold text-blue-400 uppercase mb-2"><i class="fas fa-chart-bar mr-1"></i> Goal King (Estatística)</h3>
+                            <h3 class="text-xs font-bold text-blue-400 uppercase mb-2"><i class="fas fa-chart-bar mr-1"></i> Estatística (Goal King)</h3>
                             <p class="text-sm text-slate-300 italic">"Probabilidade de BTTS sobe para 62% em jogos pós-Champions. O City vence, mas a defesa cede 1.2 gols/jogo em casa."</p>
                         </div>
                         <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-xs font-bold text-purple-400 uppercase mb-2"><i class="fas fa-brain mr-1"></i> Alex Keble (Tática)</h3>
+                            <h3 class="text-xs font-bold text-purple-400 uppercase mb-2"><i class="fas fa-brain mr-1"></i> Tática (Alex Keble)</h3>
                             <p class="text-sm text-slate-300 italic">"Transição defensiva lenta do City é o alvo. Fulham tem os alas mais rápidos da liga para explorar isso."</p>
                         </div>
                     </div>
@@ -181,11 +181,11 @@
                 <div class="p-6">
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-xs font-bold text-blue-400 uppercase mb-2"><i class="fas fa-chart-bar mr-1"></i> Goal King</h3>
+                            <h3 class="text-xs font-bold text-blue-400 uppercase mb-2"><i class="fas fa-chart-bar mr-1"></i> Estatística (Goal King)</h3>
                             <p class="text-sm text-slate-300 italic">"Média de gols do confronto direto é 4.2. Valor extremo no BTTS dado o ataque do Leipzig."</p>
                         </div>
                         <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
-                            <h3 class="text-xs font-bold text-purple-400 uppercase mb-2"><i class="fas fa-brain mr-1"></i> Alex Keble</h3>
+                            <h3 class="text-xs font-bold text-purple-400 uppercase mb-2"><i class="fas fa-brain mr-1"></i> Tática (Alex Keble)</h3>
                             <p class="text-sm text-slate-300 italic">"Desfalque na zaga do Leipzig facilita a vitória do Bayern, mas o ataque visitante marcará."</p>
                         </div>
                     </div>
@@ -220,7 +220,8 @@
 
     <script>
         function toggleCard(element) {
-            // Fecha outros cards abertos (opcional, remova se quiser abrir vários)
+            // Remove a classe 'active' de todos os outros cards, caso queira que apenas um fique aberto por vez
+            // Se quiser permitir múltiplos abertos, pode remover esse bloco 'forEach'
             const allCards = document.querySelectorAll('.card');
             allCards.forEach(card => {
                 if (card !== element) {
@@ -228,7 +229,7 @@
                 }
             });
 
-            // Alterna o card atual
+            // Alterna o estado do card clicado
             element.classList.toggle('active');
         }
     </script>
