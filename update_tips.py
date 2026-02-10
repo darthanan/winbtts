@@ -76,14 +76,24 @@ def rodar_atualizacao():
 
     # C. Pedir novas tips ao Gemini com Passo 3 (IDs Ocultos)
     prompt = """
-    Aja como um especialista em apostas esportivas e analista de dados.
-    1. Pesquise 2 jogos de futebol de elite que acontecem HOJE.
-    2. O mercado alvo é 'Vitória do Favorito + Ambos Marcam' (Win+BTTS).
-    3. Para cada jogo, você DEVE encontrar o ID da FIXTURE na API-Football (API-Sports).
-    4. Retorne o código HTML dos cards seguindo nosso padrão visual.
-    5. No topo de cada card, é OBRIGATÓRIO incluir:
-    6. Não invente IDs. Se não tiver certeza do ID, use o ID de uma liga principal.
+    Aja como um analista de dados esportivos focado em confluência de especialistas.
+    
+    SUA TAREFA:
+    1. Analise as previsões recentes de 'Alex Keble' (tática) e 'The Goal King' (estatística).
+    2. Identifique 2 jogos de CONSENSO onde ambos indicam Vitória do Favorito + Ambos Marcam.
+    
+    REGRAS OBRIGATÓRIAS DE IDENTIFICAÇÃO (API-FOOTBALL):
+    1. No topo de cada card, insira: e .
+    2. SEGURANÇA DE DADOS: Não invente ou alucine IDs. Se você não tiver 100% de certeza do ID da fixture, você DEVE buscar um jogo de uma LIGA PRINCIPAL (Premier League, La Liga, Bundesliga ou Champions League) onde o ID seja verificado e estável.
+    3. Se houver dúvida sobre o ID do jogo específico, priorize o ID da Premier League (League ID: 39).
+    
+    FORMATO:
+    - Retorne os cards HTML conforme nosso padrão visual.
+    - Mencione a visão tática de Keble e os dados do Goal King nos campos de análise.
+    
+    Retorne apenas o HTML puro.
     """
+
     response = model.generate_content(prompt)
     html_novos_jogos = response.text.replace("```html", "").replace("```", "").strip()
 
