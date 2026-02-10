@@ -1,33 +1,42 @@
-name: Atualização Diária de Tips
+name: Atualização Diária de Tips e Histórico
+
 on:
   schedule:
-    - cron: '0 12 * * *' # Roda todo dia às 12:00 UTC (09:00 Brasília)
-  workflow_dispatch: # Permite rodar manualmente se quiser
+    - cron: '0 12 * * *' # Roda às 09:00 BRT
+  workflow_dispatch: # Permite que você rode manualmente para testar
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # PASSO IMPORTANTE: Permissão para o robô escrever no seu repositório
+    permissions:
+      contents: write
+    
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v2
-      
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
       - name: Configurar Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          
-      - name: Instalar biblioteca do Gemini
-        run: pip install -U google-generativeai
-        
-      - name: Rodar script de atualização
+
+      - name: Instalar dependências
+        run: |
+          pip install -U google-generativeai
+          pip install requests
+
+      - name: Rodar script de atualização inteligente
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python update_tips.py
 
-      - name: Salvar mudanças no site e historico
+      - name: Salvar mudanças (Commit & Push)
         run: |
-          git config --global user.name 'Bot de Tips'
-          git config --global user.email 'bot@tips.com'
+          git config --global user.name 'AI-Market-Bot'
+          git config --global user.email 'bot@tipsia.com'
           git add index.html historico.json
-          git commit -m "Atualização diária: Tips e Histórico" || exit 0
+          # O '|| exit 0' evita que o erro de "nada para commitar" pare o processo
+          git commit -m "🤖 Automação: Odds e Histórico atualizados [$(date +'%d/%m/%Y')]" || exit 0
           git push
