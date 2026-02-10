@@ -13,13 +13,13 @@ genai.configure(api_key=GENAI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 def conferir_resultados_ontem():
-    """Lê o HTML, busca os IDs e valida o Win+BTTS na API-Football"""
+    """Lê o HTML, busca os IDs e valida o resultado na API-Football"""
     try:
         if not os.path.exists("index.html"): return 0
         with open("index.html", "r", encoding="utf-8") as f:
             html_antigo = f.read()
         
-        # Busca IDs ocultos nos atributos data-fixture e data-fav
+        # Busca IDs ocultos gerados pelo Gemini (padrão data-fixture="123")
         fixtures = re.findall(r'data-fixture="(\d+)"', html_antigo)
         favoritos = re.findall(r'data-fav="(\d+)"', html_antigo)
         
@@ -40,45 +40,49 @@ def conferir_resultados_ontem():
                     if match['teams']['home']['winner']: vencedor_id = match['teams']['home']['id']
                     elif match['teams']['away']['winner']: vencedor_id = match['teams']['away']['id']
 
-                    # Regra: Vitória do favorito + Ambos Marcam
+                    # Regra: Vitória do favorito + Ambos Marcam (BTTS)
                     if (g_home > 0 and g_away > 0) and (str(vencedor_id) == favoritos[i]):
-                        lucro_total += 1.5
+                        lucro_total += 1.5 # Green
                     else:
-                        lucro_total -= 1.0
+                        lucro_total -= 1.0 # Red
         return lucro_total
     except Exception as e:
-        print(f"Erro ao conferir: {e}")
+        print(f"Erro ao conferir resultados: {e}")
         return 0
 
 def gerar_novas_tips():
-    """Solicita ao Gemini o consenso com links REAIS para as casas"""
+    """Solicita ao Gemini o consenso com links REAIS e CLICÁVEIS"""
     prompt = """
-    Aja como um analista focado no consenso entre 'Alex Keble' e 'The Goal King'.
+    Aja como um analista de futebol (Consenso Alex Keble e Goal King).
     Gere 2 cards HTML para o mercado 'Vitória do Favorito + Ambos Marcam'.
     
-    ESTRUTURA OBRIGATÓRIA DO CARD:
-    1. O container principal deve ter: <div class="card" data-fixture="ID_DA_API" data-fav="ID_DO_TIME">.
-    2. AS ODDS DEVEM SER LINKS CLICÁVEIS:
-       Use EXATAMENTE este formato para os links:
-       <a href="URL_DA_CASA" target="_blank" rel="noopener" class="block bg-slate-800 p-3 rounded-lg border border-transparent hover:border-emerald-500/50 transition-all cursor-pointer no-underline text-white mb-2">
-          <span class="text-xs text-slate-400 block">NOME_DA_CASA</span>
-          <span class="font-bold text-lg">ODD_VALOR</span>
-       </a>
+    REGRAS DE OURO PARA OS LINKS:
+    1. Cada card deve ter 3 botões de odds. 
+    2. Use OBRIGATORIAMENTE a tag <a href="..." target="_blank">.
+    3. Use estes links exatos:
+       - Bet365: https://www.bet365.com
+       - BetMGM: https://sports.betmgm.com
+       - Betano: https://br.betano.com
+    
+    ESTRUTURA DO LINK (COPIE ESTE MODELO):
+    <a href="LINK_AQUI" target="_blank" rel="noopener" style="display: block; width: 100%; cursor: pointer; position: relative; z-index: 10; text-decoration: none;" class="bg-slate-800 p-4 rounded-xl border border-slate-700 hover:border-emerald-500 transition-all mb-3">
+        <span style="color: #94a3b8; font-size: 12px; display: block;">NOME_DA_CASA</span>
+        <span style="color: #ffffff; font-weight: bold; font-size: 18px;">ODD EX: 2.10</span>
+    </a>
 
-    URLs DAS CASAS:
-    - Bet365: https://www.bet365.com
-    - BetMGM: https://sports.betmgm.com
-    - Betano: https://br.betano.com
-
-    3. No texto, cite a tática (Keble) e a estatística (Goal King).
-    4. Retorne APENAS o HTML puro, sem blocos de código markdown.
+    O container principal do card deve ter os atributos: data-fixture="ID_REAL" e data-fav="ID_TIME_FAVORITO".
+    Retorne APENAS o HTML puro, sem blocos de texto ou markdown (```html).
     """
+    
     response = model.generate_content(prompt)
-    return response.text.replace("```html", "").replace("```", "").strip()
+    html_gerado = response.text.replace("```html", "").replace("```", "").strip()
+    return html_gerado
 
 def atualizar_tudo():
+    # 1. Conferir o lucro de ontem
     lucro_dia = conferir_resultados_ontem()
 
+    # 2. Gerenciar Histórico JSON
     if not os.path.exists("historico.json"):
         historico = [{"data": "Início", "lucro_acumulado": 0, "greens": 0, "reds": 0}]
     else:
@@ -96,13 +100,46 @@ def atualizar_tudo():
         "lucro_acumulado": novo_acumulado, "greens": g, "reds": r
     })
 
+    # 3. Gerar novos palpites
     html_novos_jogos = gerar_novas_tips()
 
+    # 4. Atualizar o HTML
     with open("index.html", "r", encoding="utf-8") as f:
         site = f.read()
 
-    # Atualizações de texto e gráfico via Regex
+    # Atualiza data de atualização
     data_hoje = datetime.datetime.now().strftime("%d/%m/%Y")
-    site = re.sub(r'id="update-date">Atualizado:.*?<', f'id="update-date">Atualizado: {data_hoje}<', site)
+    site = re.sub(r'id="update-date">.*?<', f'id="update-date">Atualizado: {data_hoje}<', site)
+
+    # Atualiza Gráfico (últimos 10 dias)
+    labels = [d["data"] for d in historico[-10:]]
+    valores = [d["lucro_acumulado"] for d in historico[-10:]]
+    site = re.sub(r"labels: \[.*?\]", f"labels: {labels}", site)
+    site = re.sub(r"data: \[.*?\]", f"data: {valores}", site)
+
+    # Atualiza Stats Visuais
+    site = re.sub(r'\d+%(?=</span>)', f'{win_rate}%', site, 1)
+    # Regex robusto para Greens e Reds
+    site = re.sub(r'(Greens</span>.*?text-xl font-bold text-emerald-400">)\d+', rf'\1{g}', site, flags=re.DOTALL)
+    site = re.sub(r'(Reds</span>.*?text-xl font-bold text-red-400">)\d+', rf'\1{r}', site, flags=re.DOTALL)
+
+    # 5. Injeção das Tips (Surgical Split)
+    try:
+        topo = site.split("")[0]
+        base = site.split("")[1]
+        site_final = f"{topo}\n{html_novos_jogos}\n{base}"
+    except IndexError:
+        print("Erro Crítico: Marcadores não encontrados no seu index.html")
+        return
+
+    # 6. Salvar arquivos
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(site_final)
     
-    # Injeção de conteúdo usando marc
+    with open("historico.json", "w") as f:
+        json.dump(historico, f, indent=2)
+
+    print(f"Sucesso! Lucro computado: {lucro_dia} | Win Rate: {win_rate}%")
+
+if __name__ == "__main__":
+    atualizar_tudo()
