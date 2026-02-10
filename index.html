@@ -9,15 +9,13 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
     body { background-color: #000000; }
-    .glass { 
-        background: #18181b; 
-        border-left: 4px solid #fbbf24; /* Faixa dourada na lateral */
-    }
-    .text-gradient {
-        background: linear-gradient(to right, #fbbf24, #f59e0b);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .details-panel { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, opacity 0.4s ease-out; opacity: 0; }
+        .card.active .details-panel { max-height: 800px; opacity: 1; }
+        .card.active .chevron { transform: rotate(180deg); }
+        .tab-btn.active { border-bottom: 2px solid #10b981; color: #10b981; }
+        .team-logo { width: 60px; height: 60px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.5)); }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
